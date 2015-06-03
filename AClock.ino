@@ -3,46 +3,47 @@
 #include <avr/io.h> 
 #include "RTClib.h"
 #include "ht1632c.h"
-#include "MSGEQ7.h"
-#include "RHT03.h"
+//#include "MSGEQ7.h"
+//#include "RHT03.h"
 
-#define dimPin 8
+//#define dimPin 8
 
-MSGEQ7 EQ1(2,3,0);
-ht1632c Board1(12,11,10,9);
-RHT03 TH1(5); //Temperature & Humidity sensor
-RTClib RTC;
+//MSGEQ7 EQ1(2,3,0);
+ht1632c Board1(4,5,6,7);  //(CS, CLK, WR, DATA, NC, NC, GND, VCC)
+//RHT03 TH1(5); //Temperature & Humidity sensor
+//RTClib RTC;
 
-uint8_t Mode = 0; 
-unsigned long lastTimeCheck;
-unsigned long lastModeChange;
-boolean EqualizerWorking = false;
+//uint8_t Mode = 0; 
+//unsigned long lastTimeCheck;
+//unsigned long lastModeChange;
+//boolean EqualizerWorking = false;
 boolean DimDisplay = false;
 
-boolean DateMode = true;
-boolean EqualizerMode = false;
-boolean HumidityMode = true;
-boolean TemperatureMode = true;
+//boolean DateMode = true;
+//boolean EqualizerMode = false;
+//boolean HumidityMode = true;
+//boolean TemperatureMode = true;
 
 
 void setup(){
   Serial.begin(57600);
-  pinMode(dimPin, INPUT); 
+//  pinMode(dimPin, INPUT); 
   Board1.writeRow("DEBUG", 0, 'g','e');
   delay(1500);
   Board1.resetBoard();
 }
 
 void loop(){
-  CheckDimPin();
-  UpdateTime();
-  if (!DimDisplay) ModeSelect();
-  if (Serial.available() > 0) getData();
+//  CheckDimPin();
+//  UpdateTime();
+//  if (!DimDisplay) ModeSelect();
+ // if (Serial.available() > 0) getData();
 }
 
 /******************************************************************
  *	Update Time and date on Display (if it turned on) 
  */
+/*
 void UpdateTime(){
   if (!DimDisplay){
     if (RTC.timeChanged()) {
@@ -65,10 +66,11 @@ void UpdateTime(){
     }
   }
 }
-
+*/
 /******************************************************************
  *	Check if dim button presed 
  */
+ /*
 void CheckDimPin(){
   if (digitalRead(dimPin)){
     delay(200); //debounce
@@ -91,10 +93,11 @@ void CheckDimPin(){
   if (RTC.getTime() == "05:50" && DimDisplay == true) DimDisplay = false;
 
 }
-
+*/
 /******************************************************************
  *	Select which data to show
  */
+ /*
 void ModeSelect(){
   if (EqualizerMode & EQ1.signalAvailable()){
     if (!EqualizerWorking){
@@ -132,10 +135,11 @@ void ModeSelect(){
     } 
   }
 }
-
+*/
 /******************************************************************
  *	Show equalizer on a board
  */
+ /*
 void eqDisplay(){
   for (byte y = 0; y < 7 ;y++){
     short difference = EQ1.getDifference(y); //Difference between current equalizer state an previous equalizer state
@@ -157,10 +161,11 @@ void eqDisplay(){
     Board1.point(peak, y + 9, EQ1.getPeakColor(y)); 
   }
 }
-
+*/
 /******************************************************************
  *	Get Data from Serial Port
  */
+ /*
 void getData(){
   String serIn;
   char character;
@@ -201,7 +206,7 @@ void getData(){
   }
 }
 
-
+*/
 
 
 
