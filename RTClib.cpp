@@ -54,17 +54,19 @@ String RTClib::getDate(){
  */
 String RTClib::getTime(){
 	RTClib::now();
-	return (formatNumber(hh) + ":" + formatNumber(mm));
+	return (formatNumber(hh) + " " + formatNumber(mm));
 }
 
 /******************************************************************
- *	Set time from string. Time Format: "c: dd/mm/yyyy hh:mm:ss PM" <-(or AM) 
+ *	Set time from string. 
+ *      Time Format: "c: dd/mm/yyyy hh:mm:ss PM" <-(or AM) 
+ *      9600 baud recommended!!!
  */
 void RTClib::setTime(String _serIn){
 	serIn = _serIn;
 	lastData = 3;	 //Starts from 3 because my time data starts after "c: "
 
-	tempStr = serIn.substring(3, serIn.indexOf("/"));
+    tempStr = serIn.substring(3, serIn.indexOf("/"));
     lastData = serIn.indexOf("/") + 1;
     tempStr.toCharArray(cArray, tempStr.length() + 1);
 	d = atoi(cArray);

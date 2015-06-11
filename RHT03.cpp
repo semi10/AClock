@@ -51,7 +51,13 @@ void RHT03::updateTH(){
   } 
   else{
     humidity = (((RHT03_Data[0] << 8) | RHT03_Data[1]) / 10);
-    temperature = (((RHT03_Data[2] << 8) | RHT03_Data[3]) / 10);
+    if(RHT03_Data[2] >> 7){  // If temperature is negative
+      RHT03_Data[2] = RHT03_Data[2] & B01111111;
+      temperature =  -1 * (((RHT03_Data[2] << 8) | RHT03_Data[3]) / 10);
+    }
+    else {                    // For positive temperature
+      temperature = (((RHT03_Data[2] << 8) | RHT03_Data[3]) / 10);
+    }
   }
 }
 

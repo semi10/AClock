@@ -35,14 +35,31 @@
 #define HT1632_CMD_PWM    0xA0	/* CMD= 101x-PPPP-x PWM duty cycle */
 #define HT1632_CMD_BITS (1<<7)
 
-
 class ht1632c{
+  
+  typedef struct{
+    String txt;
+    char color;   
+  } Message;
+    
+  typedef struct{
+    Message  newMsg;
+    Message  oldMsg;
+    int  pause;              // Delay Between text shift
+    unsigned long lastMove;   // Last shift
+    byte  scrollChar;         // First char to write
+    byte  charColumn;         // Column of first char to write 
+  } Row;
+  
   public:
 	  ht1632c(byte ht1632_cs, byte ht1632_clk, byte ht1632_wrclk, byte ht1632_data);
 	  void point(byte x , byte y, char color);
-          void writeRow(String message, boolean row, char color, char language);
+          void load(String message, boolean line, char color);
+          void print(String message, boolean line, char color, boolean noGap);
+          void scroll(boolean row, int pause);
 	  void resetBoard();
 	  void resetBoard(boolean row);
+          void setBrightness(byte lux);
   private:
 	  void chipFree();
 	  void chipSelect(byte chip);
@@ -50,10 +67,13 @@ class ht1632c{
 	  void sendData (byte c, byte address, byte data);
 	  void reAddress(byte column, byte row, char color, byte data);
 	  void writeBits (byte bits, byte firstbit);
-          uint8_t addressState[32][2][2];         // addressState of [column][row][color: 0 - for red, 1 - for green]
+          byte activeChip;
+          byte addressState[32][2][2];         // addressState of [column][row][color: 0 - for red, 1 - for green]
 	  byte _ht1632_cs;
 	  byte _ht1632_clk;
 	  byte _ht1632_wrclk;
-	  byte _ht1632_data;
+	  byte _ht1632_data;         
+          Row row[2];
+          
 };
 #endif

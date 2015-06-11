@@ -11,10 +11,10 @@
 //MSGEQ7 EQ1(2,3,0);
 ht1632c Board1(4,5,6,7);  //(CS, CLK, WR, DATA, NC, NC, GND, VCC)
 //RHT03 TH1(5); //Temperature & Humidity sensor
-//RTClib RTC;
+RTClib RTC;
 
 //uint8_t Mode = 0; 
-//unsigned long lastTimeCheck;
+unsigned long lastTimeCheck;
 //unsigned long lastModeChange;
 //boolean EqualizerWorking = false;
 boolean DimDisplay = false;
@@ -24,49 +24,57 @@ boolean DimDisplay = false;
 //boolean HumidityMode = true;
 //boolean TemperatureMode = true;
 
-
 void setup(){
-  Serial.begin(57600);
-//  pinMode(dimPin, INPUT); 
-  Board1.writeRow("DEBUG", 0, 'g','e');
-  delay(1500);
   Board1.resetBoard();
+  Board1.print("Debug!", 1, 'g', 1);
+  delay(2000);
+  
+  Serial.begin(57600);
+//  pinMode(dimPin, INPUT);
+  Serial.println(B10000001);
 }
 
 void loop(){
+
+
 //  CheckDimPin();
-//  UpdateTime();
+  UpdateTime();
 //  if (!DimDisplay) ModeSelect();
- // if (Serial.available() > 0) getData();
+  if (Serial.available() > 0) getData();
 }
 
 /******************************************************************
  *	Update Time and date on Display (if it turned on) 
  */
-/*
+
 void UpdateTime(){
+  static unsigned long lastBlink;
+ 
   if (!DimDisplay){
     if (RTC.timeChanged()) {
-      Board1.writeRow(RTC.getTime(), 0, 'g', 'e');
+      Board1.print(RTC.getTime(), 0, 'g', 0);
       lastTimeCheck = millis();
     }
     else if (abs(millis() - lastTimeCheck) > 62000) {
-      Board1.writeRow("??:??", 0, 'g', 'e');
-      // Board1.writeRow("??/??", 1, 'g', 'e');
+      Board1.print("??:??", 0, 'g', 0);
+      // Board1.print("??/??", 1, 'g', 'e');
       lastTimeCheck = millis();
     } 
     // Creates 2 blinking Dots to show the activity of the clock
-    if(millis() % 1000 > 500){ 
-      Board1.point(15, 3, 'g');
-      Board1.point(15, 5, 'g');
+    if(millis() - lastBlink < 500){
+      Board1.point(15, 2, 'g');
+      Board1.point(15, 4, 'g');
     }
-    else{
-      Board1.point(15, 3, 'b');
-      Board1.point(15, 5, 'b');
+    else if(millis() - lastBlink > 1000){
+      lastBlink = millis();
+    }
+    else{ 
+      Board1.point(15, 2, 'b');
+      Board1.point(15, 4, 'b');
     }
   }
 }
-*/
+
 /******************************************************************
  *	Check if dim button presed 
  */
@@ -80,7 +88,7 @@ void CheckDimPin(){
     //Turn Display On/Off
     if (DimDisplay){  
       DimDisplay = false;
-      Board1.writeRow(RTC.getTime(), 0, 'g', 'e');
+      Board1.print(RTC.getTime(), 0, 'g', 'e');
     }
     else{
 
@@ -114,17 +122,17 @@ void ModeSelect(){
 
     for (int m = 0; m < 4; m++){
       if (Mode == 0 && DateMode){
-        Board1.writeRow(RTC.getDate(), 1, 'g', 'e');
+        Board1.print(RTC.getDate(), 1, 'g', 'e');
         Mode++;    
         break;
       }
       else if (Mode == 1 && HumidityMode){
-        Board1.writeRow(TH1.getHumidity() , 1, 'g', 'e');
+        Board1.print(TH1.getHumidity() , 1, 'g', 'e');
         Mode++;
         break;  
       }
       else if (Mode == 2 && TemperatureMode){
-        Board1.writeRow(TH1.getTemperature(), 1, 'g', 'e');
+        Board1.print(TH1.getTemperature(), 1, 'g', 'e');
         Mode++;
         break;
       }
@@ -165,17 +173,18 @@ void eqDisplay(){
 /******************************************************************
  *	Get Data from Serial Port
  */
- /*
+ 
 void getData(){
   String serIn;
   char character;
   char temp[3]; //for string to number convertion
 
   while (Serial.available()){
+    delay(20);
     character = Serial.read();
     serIn.concat(character);
   }
-
+  Serial.println(serIn);
   if (serIn.compareTo( "R") == 0){
     wdt_enable(WDTO_15MS); //Tells watchdog to reset after 15ms for remote sketch upload
   }
@@ -184,12 +193,12 @@ void getData(){
   }
   else if (serIn.startsWith("t:")){ //t: for write text
     Board1.resetBoard(0);
-    Board1.writeRow(serIn.substring(6, serIn.length()), 0, 'g', serIn.charAt(3));
+    Board1.print(serIn.substring(6, serIn.length()), 0, 'g', 0);
     if (serIn.length() <= 11) delay(1500);
     Board1.resetBoard(0);
-    Board1.writeRow(RTC.getTime(), 0, 'g', 'e');
+    Board1.print(RTC.getTime(), 0, 'g', 'e');
   }
-  else if (serIn.startsWith("m?")){  //m? for mode check
+ /* else if (serIn.startsWith("m?")){  //m? for mode check
     delay(100);
     Serial.println("m: " + String(DateMode | (EqualizerMode << 1) | (HumidityMode << 2) | (TemperatureMode << 3), BIN));
   }
@@ -203,88 +212,8 @@ void getData(){
     HumidityMode = atoi(temp) & 4;
     TemperatureMode = atoi(temp) & 8;
 
-  }
+  }*/
 }
-
-*/
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
