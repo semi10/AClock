@@ -125,37 +125,78 @@ void ht1632c::writeBits (byte bits, byte firstbit)
  *Returns:    None
  */
 void ht1632c::point(byte x , byte y, char color) {
+  
+  byte chip;
+  byte addressGreen;	//for green dots on same location
+  byte addressRed;      //for red dots on same location
 
+  
   boolean row;    //row to send data to
-  byte address;   //address to send data to
   byte data;      //data to send
 
-
   row = y / 8;
+  chip = (x > 15) + row * 2;
+  addressGreen = (x % 16) * 2;
+  addressRed = 32 + (x % 16) * 2;
+
+
+  
   switch (color) {
     case 'g':
-      data = (addressState[x][row][1]) | (B10000000 >> (y % 8));
-      reAddress(x, row, color, data);
-      data = (addressState[x][row][0]) & (~(B10000000 >> (y % 8)));
-      reAddress(x, row, 'r', data);
+      if(addressState[x][row][1] != (addressState[x][row][1] | (B10000000 >> (y % 8)))){
+        data = (addressState[x][row][1] | (B10000000 >> (y % 8)));
+        sendData(chip, addressGreen, data >> 4);  //send data to first half of single dot matrix
+        sendData(chip, addressGreen + 1, data);   //send data to second half of single dot matrix
+        addressState[x][row][1] = data;
+      }
+      if(addressState[x][row][0] != (addressState[x][row][0] & ~(B10000000 >> (y % 8)))){
+        data = (addressState[x][row][0] & ~(B10000000 >> (y % 8)));
+        sendData(chip, addressRed, data >> 4);    //clear first half of single dot matrix
+        sendData(chip, addressRed + 1, data);     //clear second half of single dot matrix
+        addressState[x][row][0] = data; 
+      }
       break;
     case 'r':
-      data = (addressState[x][row][0]) | (B10000000 >> (y % 8));
-      reAddress(x, row, color, data);
-      data = (addressState[x][row][1]) & (~(B10000000 >> (y % 8)));
-      reAddress(x, row, 'g', data);
+      if(addressState[x][row][0] != (addressState[x][row][0] | (B10000000 >> (y % 8)))){
+        data = (addressState[x][row][0]) | (B10000000 >> (y % 8));
+        sendData(chip, addressRed, data >> 4);    //send data to first half of single dot matrix
+        sendData(chip, addressRed + 1, data);     //send data to second half of single dot matrix
+        addressState[x][row][0] = data; 
+      }
+      if(addressState[x][row][1] != (addressState[x][row][1] & ~(B10000000 >> (y % 8)))){
+        data = (addressState[x][row][1] & ~(B10000000 >> (y % 8)));
+        sendData(chip, addressGreen, data >> 4);  //clear first half of single dot matrix
+        sendData(chip, addressGreen + 1, data);   //clear second half of single dot matrix
+        addressState[x][row][1] = data;
+      }
       break;
     case 'o':
-      data = (addressState[x][row][0]) | (B10000000 >> (y % 8));
-      reAddress(x, row, 'g', data);
-      data = (addressState[x][row][1]) | (B10000000 >> (y % 8));
-      reAddress(x, row, 'r', data);
+      if(addressState[x][row][1] != (addressState[x][row][1] | (B10000000 >> (y % 8)))){
+        data = (addressState[x][row][1] | (B10000000 >> (y % 8)));
+        sendData(chip, addressGreen, data >> 4);  //send data to first half of single dot matrix
+        sendData(chip, addressGreen + 1, data);   //send data to second half of single dot matrix
+        addressState[x][row][1] = data;
+      }
+      if(addressState[x][row][0] != (addressState[x][row][0] | (B10000000 >> (y % 8)))){
+        data = (addressState[x][row][0]) | (B10000000 >> (y % 8));
+        sendData(chip, addressRed, data >> 4);    //send data to first half of single dot matrix
+        sendData(chip, addressRed + 1, data);     //send data to second half of single dot matrix
+        addressState[x][row][0] = data; 
+      }
       break;
     case 'b':
-      data = (addressState[x][row][0]) & (~(B10000000 >> (y % 8)));
-      reAddress(x, row, 'g', data);
-      data = (addressState[x][row][1]) & (~(B10000000 >> (y % 8)));
-      reAddress(x, row, 'r', data);
+      if(addressState[x][row][0] != (addressState[x][row][0] & ~(B10000000 >> (y % 8)))){
+        data = (addressState[x][row][0] & ~(B10000000 >> (y % 8)));
+        sendData(chip, addressRed, data >> 4);    //clear first half of single dot matrix
+        sendData(chip, addressRed + 1, data);     //clear second half of single dot matrix
+        addressState[x][row][0] = data; 
+      }
+      if(addressState[x][row][1] != (addressState[x][row][1] & ~(B10000000 >> (y % 8)))){
+        data = (addressState[x][row][1] & ~(B10000000 >> (y % 8)));
+        sendData(chip, addressGreen, data >> 4);  //clear first half of single dot matrix
+        sendData(chip, addressGreen + 1, data);   //clear second half of single dot matrix
+        addressState[x][row][1] = data;
+      }
       break;
   }
 
@@ -186,12 +227,22 @@ void ht1632c::reAddress(byte column, byte row, char color, byte data) {
         sendData(chip, addressGreen + 1, data);   //send data to second half of single dot matrix
         addressState[column][row][1] = data;
       }
+      if(addressState[column][row][0] != 0x00){
+        sendData(chip, addressRed, 0x00);         //send data to first half of single dot matrix
+        sendData(chip, addressRed + 1, 0x00);     //send data to second half of single dot matrix
+        addressState[column][row][0] = 0x00; 
+      }
       break;
     case 'r':
       if(addressState[column][row][0] != data){
         sendData(chip, addressRed, data >> 4);    //send data to first half of single dot matrix
         sendData(chip, addressRed + 1, data);     //send data to second half of single dot matrix
-        addressState[column][row][0] = data;
+        addressState[column][row][0] = data;        
+      }
+      if(addressState[column][row][1] != 0x00){
+        sendData(chip, addressGreen, 0x00);         //send data to first half of single dot matrix
+        sendData(chip, addressGreen + 1, 0x00);     //send data to second half of single dot matrix
+        addressState[column][row][1] = 0x00; 
       }
       break;
     case 'o':
@@ -228,7 +279,10 @@ void ht1632c::print(String message, boolean line, char color, boolean noGap) {
   byte boardColumn;         // Board consists of 32 columns 
   
   if(noGap) boardColumn = 0;
-  else boardColumn = 1;
+  else{
+    reAddress(0 , line, 'o', 0x00);
+    boardColumn = 1;
+  }
   
   for (byte charNumber = 0; charNumber < message.length(); charNumber++) {
     currentChar = message.charAt(charNumber) - 32;
@@ -240,7 +294,10 @@ void ht1632c::print(String message, boolean line, char color, boolean noGap) {
       reAddress(boardColumn , line, color, dots);
       boardColumn += 1;
    } 
- }  
+ }
+  for(boardColumn; boardColumn < 32; boardColumn++){    //Write till the end of the board to wipe previous data
+    reAddress(boardColumn , line, 'o', 0x00);
+  }
 }
 
 /*************************************************************
@@ -253,11 +310,11 @@ void ht1632c::print(String message, boolean line, char color, boolean noGap) {
  */
 void ht1632c::load(String message, boolean line, char color){
   if(row[line].oldMsg.txt == ""){
-    row[line].oldMsg.txt =  "      " + message + "     ";
+    row[line].oldMsg.txt =  "      " + message + "      ";
     row[line].oldMsg.color = color; 
   }
   else{
-    row[line].newMsg.txt =  "      " + message + "     ";
+    row[line].newMsg.txt =  "      " + message + "      ";
     row[line].newMsg.color = color; 
   }
 }
@@ -267,9 +324,9 @@ void ht1632c::load(String message, boolean line, char color){
  *scroll - scrolls characters on board from old row to newer.
  *Syntax:     scrollRow(pause)
  *Parameters: pause - delay between rotations 
- *Returns:    none
+ *Returns:    boolean - '0' scroll in progress, '1' end of scroll
  */
- void ht1632c::scroll(boolean line, int pause){
+ boolean ht1632c::scroll(boolean line, int pause){
    byte dots;	                 // Dots char consist of
    char currentChar;             // Char to write
    byte charColumn = 0;          // Char array consists of 5 columns         
@@ -301,7 +358,7 @@ void ht1632c::load(String message, boolean line, char color){
          if(boardColumn > 31) {  // Length of the board exceeded
            row[line].scrollChar += (row[line].charColumn + 1) / 6;
            row[line].charColumn = (row[line].charColumn + 1) % 6;
-           return;                      
+           return 0;  //There is more data to scroll                    
          }
          
          dots = pgm_read_byte_near(&Font[currentChar][charColumn]);
@@ -310,18 +367,19 @@ void ht1632c::load(String message, boolean line, char color){
          reAddress(boardColumn , line, row[line].oldMsg.color, dots);
 
          boardColumn += 1;
-       }  
-       
+       }         
     }
-
-    if(row[line].newMsg.txt != ""){
+    
+    if(row[line].newMsg.txt != ""){  //If there is new text to scroll
       row[line].oldMsg.txt = row[line].newMsg.txt;
       row[line].oldMsg.color = row[line].newMsg.color; 
       row[line].newMsg.txt = "";
     }
     row[line].scrollChar = 0;
     row[line].charColumn = 0;
+    return 1; //Scroll finish
   }
+  return 0;
 }
 
 /******************************************************************
@@ -335,6 +393,12 @@ void ht1632c::resetBoard() {
     for(byte address = 0; address < 64; address++){
       sendData(chip, address, 0x00);
     }
+  }
+    for(byte column = 0; column < 32; column++){
+      addressState[column][0][0] = 0x00;
+      addressState[column][0][1] = 0x00;
+      addressState[column][1][0] = 0x00;
+      addressState[column][1][1] = 0x00;
   }
 }
 
@@ -353,6 +417,10 @@ void ht1632c::resetBoard(boolean row) {
       }
     }
   }
+  for(byte column = 0; column < 32; column++){
+    addressState[column][row][0] = 0x00;
+    addressState[column][row][1] = 0x00;
+  }
 }
 
 /******************************************************************
@@ -365,4 +433,30 @@ void ht1632c::setBrightness(byte lux) {
   for (byte c = 0; c < 4; c++) {
     sendCmd(c, HT1632_CMD_PWM + lux);
   }
+}
+
+/******************************************************************
+ *turnOn - Turn on the display
+ *Syntax:     turnOn
+ *Parameters: none
+ *Returns:    none
+ */
+void ht1632c::turnOn(){
+  for(int chip = 0; chip < 4; chip++){
+    sendCmd(chip, HT1632_CMD_SYSON);  
+    sendCmd(chip, HT1632_CMD_LEDON);
+  } 
+}
+
+/******************************************************************
+ *turnOff - Turn off the display
+ *Syntax:     turnOff
+ *Parameters: none
+ *Returns:    none
+ */
+void ht1632c::turnOff(){
+    for(int chip = 0; chip < 4; chip++){
+      sendCmd(chip, HT1632_CMD_LEDOFF);
+      sendCmd(chip, HT1632_CMD_SYSDIS);  
+  } 
 }

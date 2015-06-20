@@ -5,32 +5,35 @@
 
 RHT03::RHT03(uint8_t _RHT03_Pin){ //constructor
   RHT03_Pin = _RHT03_Pin;
-  DDRD |= (1 << RHT03_Pin);    //RHT03Pin as output  
-  PORTD |= (1 << RHT03_Pin);    //RH03Pin HIGH   
+  DDRB |= (1 << RHT03_Pin);    //RHT03Pin as output  
+  PORTB |= (1 << RHT03_Pin);    //RH03Pin HIGH   
 }
 
 /******************************************************************
  *	Update current temperature & humidity
  */
 void RHT03::updateTH(){
+  static unsigned long int lastUpdate;
+  if(millis() - lastUpdate < 4000) return;
+  
   for (int x = 0; x < 5; x++){
     RHT03_Data[x] = 0;
   }
 
-  PORTD &= ~(1 << RHT03_Pin); //RHT03Pin LOW
+  PORTB &= ~(1 << RHT03_Pin); //RHT03Pin LOW
   delay(30);
-  PORTD |= (1 << RHT03_Pin);  //RHT03Pin HIGH
+  PORTB |= (1 << RHT03_Pin);  //RHT03Pin HIGH
   delayMicroseconds(40);
-  DDRD &= ~(1 << RHT03_Pin);  //RHT03Pin as input
+  DDRB &= ~(1 << RHT03_Pin);  //RHT03Pin as input
   delayMicroseconds(40);
 
   //Sensor response check
-  if (PIND & (1 << RHT03_Pin)){
+  if (PINB & (1 << RHT03_Pin)){
     Serial.println("RHT03: Response Check 1 Error"); 
     return;
   }
   delayMicroseconds(80);
-  if (!(PIND & (1 << RHT03_Pin))){
+  if (!(PINB & (1 << RHT03_Pin))){
     Serial.println("RHT03: Response Check 2 Error"); 
     return;
   }
@@ -40,8 +43,8 @@ void RHT03::updateTH(){
     RHT03_Data[i] = Read_RHT03_Data();
   }
 
-  DDRD |= (1 << RHT03_Pin);    //RHT03Pin as output  
-  PORTD |= (1 << RHT03_Pin);    //RH03Pin HIGH   
+  DDRB |= (1 << RHT03_Pin);    //RHT03Pin as output  
+  PORTB |= (1 << RHT03_Pin);    //RH03Pin HIGH   
 
 
   //Check Sum, sometimes check sum bigger than 8 bit so we multiply it by B11111111
@@ -59,31 +62,32 @@ void RHT03::updateTH(){
       temperature = (((RHT03_Data[2] << 8) | RHT03_Data[3]) / 10);
     }
   }
+  
+  lastUpdate = millis();
 }
 
 uint8_t RHT03::Read_RHT03_Data(){
   uint8_t result = 0;
 
   for(int i = 0; i < 8; i++){
-    while(!(PIND & (1 << RHT03_Pin))); //wait 40usec
+    while(!(PINB & (1 << RHT03_Pin))); //wait 40usec
     delayMicroseconds(40);
 
-    if(PIND & (1 << RHT03_Pin)){  //if pin still '1' after 40usec that it's '1'
+    if(PINB & (1 << RHT03_Pin)){  //if pin still '1' after 40usec that it's '1'
       result |= (1 << (7 - i));
     }
-    while(PIND & (1 << RHT03_Pin));    //wait for next bit
+    while(PINB & (1 << RHT03_Pin));    //wait for next bit
   }
   return result;
 }
 
-String RHT03::getHumidity(){
+int RHT03::getHumidity(){
   updateTH();
-  return("H:" + String(humidity, DEC) + "%");
+  return((int)humidity);
 }
 
-String RHT03::getTemperature(){
+int RHT03::getTemperature(){
   updateTH();
-
-  return("T:" + String(temperature, DEC) + "C");
+  return((int)temperature);
 }
 

@@ -9,12 +9,12 @@
 class RHT03{
   public:
 	  RHT03(uint8_t _RHT03_Pin);
-	  String getTemperature();
-	  String getHumidity();	  
+	  int getTemperature();
+	  int getHumidity();	  
   private:
 	  uint8_t RHT03_Pin;
 	  uint8_t RHT03_Data[5];
-	  uint8_t temperature;
+	  int temperature;
 	  uint8_t humidity;
 	  void	  updateTH();
 	  uint8_t Read_RHT03_Data();

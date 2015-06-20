@@ -56,10 +56,12 @@ class ht1632c{
 	  void point(byte x , byte y, char color);
           void load(String message, boolean line, char color);
           void print(String message, boolean line, char color, boolean noGap);
-          void scroll(boolean row, int pause);
+          boolean scroll(boolean row, int pause);
 	  void resetBoard();
 	  void resetBoard(boolean row);
           void setBrightness(byte lux);
+          void turnOn();
+          void turnOff();
   private:
 	  void chipFree();
 	  void chipSelect(byte chip);

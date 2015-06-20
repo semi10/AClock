@@ -16,17 +16,22 @@ class RTClib{
 	  void setTime(String _serIn);
 	  String getDate();
 	  String getTime();	
-	  uint8_t getSec() {return ss;}
-	  boolean timeChanged();    //True if pmm != mm 
-	  uint16_t date2days(uint8_t d, uint8_t m, uint16_t y);
-	  uint16_t dateDiff(uint8_t day, uint8_t month, uint16_t year);
+	  uint8_t getSec()     {return ss;}
+          uint8_t getMinute()  {return mm;}
+          uint8_t getHour()    {return hh;}
+          uint8_t getDay()     {return d;}
+          uint8_t getMonth()   {return m;}
+          uint8_t getYear()   {return y;}
+      	  boolean timeChanged();    //True if pmm != mm 
+	  uint16_t date2days(uint8_t d, uint8_t m, uint8_t y);
+	  uint16_t dateDiff(uint8_t day, uint8_t month, uint8_t year);
 	  uint16_t timeDiff(uint8_t minutes, uint8_t hours);
   private:
 	  String serIn; //Serial data input
 	  String tempStr; //temp string from serIn
 	  char cArray[5]; //char Array for string to integer convertion
 	  byte lastData; //to keep track of my current position in serIn String.
-	  uint16_t y;
+	  uint8_t y;
 	  uint8_t m, d, hh, mm, ss;  
 	  uint8_t pmm;					//pmm = prevous minute
 	  uint8_t bcd2dec(uint8_t val);

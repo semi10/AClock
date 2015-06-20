@@ -22,7 +22,7 @@ void RTClib::now(){
   Wire.read();
   d = bcd2dec(Wire.read());
   m = bcd2dec(Wire.read());
-  y = bcd2dec(Wire.read()) + 2000;
+  y = bcd2dec(Wire.read());
 }
 
 /******************************************************************
@@ -167,7 +167,7 @@ uint16_t RTClib::timeDiff(uint8_t minutes, uint8_t hours){
 /******************************************************************
  *	Number of days from now to some date
  */
-uint16_t RTClib::dateDiff(uint8_t day, uint8_t month, uint16_t year){
+uint16_t RTClib::dateDiff(uint8_t day, uint8_t month, uint8_t year){
 	return date2days(day, month, year) - date2days(d, m, y);
 }
 
@@ -175,8 +175,7 @@ uint16_t RTClib::dateDiff(uint8_t day, uint8_t month, uint16_t year){
 /******************************************************************
  *	Number of days since 2000/01/01, valid for 2001....2099
  */
-uint16_t RTClib::date2days(uint8_t day, uint8_t month, uint16_t year){
-	year -= 2000;
+uint16_t RTClib::date2days(uint8_t day, uint8_t month, uint8_t year){
 	uint16_t days = day; 
 	for (uint8_t i = 1; i < month; i++)
 		days += pgm_read_byte(daysInMonth + i - 1);
