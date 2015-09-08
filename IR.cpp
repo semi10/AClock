@@ -26,10 +26,11 @@ boolean IR::available(){
  *	Get command from IR remote
  */
 char IR::receive(){
-
-  delay(11);   //Ignore Junk
+  static unsigned long receiveStart;
   
-  while((PIND & (1 << IRpin)));
+  delay(11);   //Ignore Junk
+  receiveStart = millis();
+  while((PIND & (1 << IRpin))&& ((millis() - receiveStart) < 6));
     
   address = getData();
   command = getData();
@@ -75,8 +76,8 @@ word IR::getData(){
   if(bitLength < 1250 && bitLength > 1050) bitValue = 0;
   else if(bitLength < 2350 && bitLength > 2150) bitValue = 1;
   else{
-     Serial.print("  Too long/short command at bit: ");
-     Serial.println(i);
+   //  Serial.print("  Too long/short command at bit: ");
+   //  Serial.println(i);
     return 0;
   }
     

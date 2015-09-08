@@ -23,7 +23,7 @@ class RTClib{
           uint8_t getMonth()   {return m;}
           uint8_t getYear()   {return y;}
       	  boolean timeChanged();    //True if pmm != mm 
-	  uint16_t date2days(uint8_t d, uint8_t m, uint8_t y);
+	  int date2days(uint8_t d, uint8_t m, uint8_t y);
 	  uint16_t dateDiff(uint8_t day, uint8_t month, uint8_t year);
 	  uint16_t timeDiff(uint8_t minutes, uint8_t hours);
   private:

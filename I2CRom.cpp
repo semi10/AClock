@@ -12,7 +12,7 @@ I2CRom::I2CRom(){ //constructor
 /******************************************************************
  *	Write data to EEPROM
  */
-void I2CRom::write(unsigned int address, byte data){ //constructor
+void I2CRom::write(unsigned int address, byte data){ 
   Wire.beginTransmission(I2CRom_ADDRESS);
   Wire.write(highByte(address));
   Wire.write(lowByte(address)); 
@@ -20,7 +20,6 @@ void I2CRom::write(unsigned int address, byte data){ //constructor
   Wire.endTransmission();
   delay(10);
 }
-
 
 /******************************************************************
  *	Read data from EEPROM

@@ -20,10 +20,14 @@ ht1632c::ht1632c(byte ht1632_cs, byte ht1632_clk, byte ht1632_wrclk, byte ht1632
   _ht1632_wrclk = ht1632_wrclk;	        //Write data clock input
   _ht1632_data = ht1632_data;		//Data input
 
-  pinMode(_ht1632_cs, OUTPUT);
-  pinMode(_ht1632_clk, OUTPUT);
-  pinMode(_ht1632_wrclk, OUTPUT);
-  pinMode(_ht1632_data, OUTPUT);
+  DDRD |= (1 << _ht1632_cs);       //ht1632_cs as output  
+  DDRD |= (1 << _ht1632_clk);      //_ht1632_clk as output
+  DDRD |= (1 << _ht1632_wrclk);    //_ht1632_wrclk as output
+  DDRB |= (1 << _ht1632_data);     //_ht1632_data as output
+  //pinMode(_ht1632_cs, OUTPUT);
+ // pinMode(_ht1632_clk, OUTPUT);
+ // pinMode(_ht1632_wrclk, OUTPUT);
+ // pinMode(_ht1632_data, OUTPUT);
   
   
   for (int chip = 0; chip < 4; chip++) {
@@ -106,10 +110,10 @@ void ht1632c::writeBits (byte bits, byte firstbit)
     PORTD &= ~(B00000001 << _ht1632_wrclk);    //wrclk-LOW
 
     if (bits & firstbit) {
-      PORTD |= B00000001 << _ht1632_data;      //data-HIGH
+      PORTB |= B00000001 << _ht1632_data;      //data-HIGH
     }
     else {
-      PORTD &= ~(B00000001 << _ht1632_data);  //data-LOW
+      PORTB &= ~(B00000001 << _ht1632_data);  //data-LOW
     }
     PORTD |= B00000001 << _ht1632_wrclk;    //wrclk-HIGH
     firstbit >>= 1;
@@ -342,7 +346,7 @@ void ht1632c::load(String message, boolean line, char color){
        currentChar = txt.charAt(charNumber) - 32;
     
        if(charNumber == scrollChar){
-         if(row[line].charColumn == 0 && currentChar != 0){
+         if(row[line].charColumn != 5 && currentChar != 0){ //Ignore gaps besides spaces between two chars         
            while(pgm_read_byte_near(&Font[currentChar][row[line].charColumn]) == 0x00){
              row[line].charColumn++;      //Skip spaces at the beginning of the char 
            }

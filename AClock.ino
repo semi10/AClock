@@ -10,34 +10,35 @@
 
 #define IRpin 2
 #define LDRPin 3
+#define red 9
+#define green 10
+#define blue 11
 
-ht1632c Board1(4,5,6,7);  //(CS, CLK, WR, DATA, NC, NC, GND, VCC)
-RHT03 TH(0);  //Temperature & Humidity sensor
+ht1632c Board1(5,6,7,0);  //(CS, CLK, WR, DATA, NC, NC, GND, VCC) -> (CS,CLK,WR - Port D , DATA - Port B)
+RHT03 TH(4);  //Temperature & Humidity sensor
 RTClib RTC;   //Real Time Clock
 I2CRom Rom;
-IR  IR1(2); //"auxtek" IR remote
+IR  IR1(IRpin);                  // IR remote
+boolean statusLed[3] = {0,1,0};  // [R,G,B]
 
-volatile boolean standby = false;
+boolean sleep = false;
+volatile boolean standBy = false;    //No movement registered in last 20 minutes
 unsigned long lastTimeUpdate;
 
 boolean DateMode = false;
 boolean HumidityMode = true;
 boolean TemperatureMode = true;
 
-unsigned long startOfLoop;
-int loopLength;
-
 void setup(){
-  Serial.begin(57600);
-  attachInterrupt(1, sleep, RISING);
+  Serial.begin(19200);
   Board1.resetBoard();
+  attachInterrupt(1, goToStandBy, FALLING);
   Board1.print("Debug", 0, 'g', 1);
-  Board1.load("i o i o i", 1, 'g');
+  Board1.load("Some random text to test IR receiver..", 1, 'g');
   delay(4000);
 }
 
 void loop(){
-  startOfLoop = millis();
   
   if(RTC.timeChanged()){ //Executed each minute
     UpdateTime(); 
@@ -56,26 +57,21 @@ void loop(){
   if(IR1.available()) receiveIR();
   
   adjustBrightness();
- //  Board1.scroll(1, 150);
-  if (!standby) ModeSelect();
+  if (!standBy) ModeSelect();
   if (Serial.available() > 0) getData();
   
   blink();
-  
-  loopLength = millis() - startOfLoop;
-  if(loopLength > 9) Serial.println(loopLength);
 }
 
 /******************************************************************
  *	Update Time and date on Display (if it turned on) 
  */
-
 void UpdateTime(){ 
   Board1.print(RTC.getTime(), 0, 'g', 0);
   
-  if (RTC.getTime() == "06 40" && standby == true){ // Turn on display in the morning
-    standby = false; 
-    Board1.turnOn();
+  if (RTC.getTime() == "06 40" && standBy == true){ // Turn on display in the morning
+    sleep = false; 
+    if (!standBy) Board1.turnOn();
   } 
 }
 
@@ -129,37 +125,65 @@ void getData(){
     serIn.concat(character);
   }
   Serial.println(serIn);
-  if (serIn.compareTo("R") == 0){
-    wdt_enable(WDTO_15MS); //Tells watchdog to reset after 15ms for remote sketch upload
-  }
-  else if (serIn.startsWith("setTime:")){ //setTime: for clock adjust
+  if (serIn.startsWith("c:")){ //c: for clock adjust - Time Format: "c: dd/mm/yyyy hh:mm:ss PM" <-(or AM) 
     RTC.setTime(serIn);
   }
-  else if (serIn.startsWith("print:")){ //print: for write text
+  else if(serIn.startsWith("c?")){
+    Serial.print(RTC.getDay());
+    Serial.print("/");
+    Serial.print(RTC.getMonth());
+    Serial.print("/");
+    Serial.print(RTC.getYear());
+    Serial.print(" ");
+    Serial.print(RTC.getHour());
+    Serial.print(":");
+    Serial.print(RTC.getMinute());
+    Serial.print(":");    
+    Serial.println(RTC.getSec());
+  }
+  else if (serIn.startsWith("p:")){ //p for print text
     Board1.resetBoard(0);
-    Board1.print(serIn.substring(6, serIn.length()), 0, 'g', 0);
+    Board1.print(serIn.substring(3, serIn.length()), 0, 'g', 0);
     if (serIn.length() <= 11) delay(1500);
     Board1.resetBoard(0);
     Board1.print(RTC.getTime(), 0, 'g', 0);
   }
-  else if (serIn.startsWith("mode?")){  //mode? for mode check
+  else if (serIn.startsWith("m?")){  //m? for mode check
     delay(100);
     Serial.println("mode: " + String(DateMode |  (HumidityMode << 1) | (TemperatureMode << 2), BIN));
   }
-  else if (serIn.startsWith("mode:")){ //mode: for mode change
+  else if (serIn.startsWith("m:")){ //m: for mode change
     serIn = serIn.substring(3, serIn.length());
     serIn.toCharArray(temp, serIn.length() + 1);
     DateMode = atoi(temp) & 1;
     HumidityMode = atoi(temp) & 2;
     TemperatureMode = atoi(temp) & 4;
   }
+  else if(serIn.startsWith("\r\nCONNECT")){
+    statusLed[0] = 0;  //R
+    statusLed[1] = 0;  //G
+    statusLed[2] = 1;  //B
+  }
+  else if(serIn.startsWith("\r\nDISCONNECT")){
+    statusLed[0] = 0;  //R
+    statusLed[1] = 1;  //G
+    statusLed[2] = 0;  //B
+  }
   else if(serIn.startsWith("rom?")){    //rom? for rom read 
+  int progress = 0;
      Board1.print("R.O.M", 0, 'g', 1);
-     Board1.print("Read...", 1, 'g', 1);
-     for(int day = 0; day < 642; day++){
+     Board1.print("Read", 1, 'g', 1);
+     for(int day = 0; day < 642; day++){  //day < 642      
       for(int column = 0; column < 51; column++){
         Serial.print(Rom.read(day * 51 + column));
         Serial.print(" ");
+        
+        if ((day * 51 + column) % 512 == 0){
+        if (progress < 32) Board1.point(progress, 15, 'r');
+        else Board1.point(progress - 32, 15, 'o');
+        progress += 1; 
+        }
+     
       }
       Serial.println();
     }
@@ -169,30 +193,10 @@ void getData(){
 }
 
 /******************************************************************
- *	Put display into sleep mode
- */
-void sleep(){
-  static unsigned long lastPress;
-   
-  if (millis() - lastPress > 500){
-    lastPress = millis();
-    if(standby){
-      standby = false;
-      Board1.turnOn();
-    }
-    else{
-      standby = true;
-      Board1.turnOff();
-    }
-  }
-}
-
-
-/******************************************************************
  *	Write temperature & humidity values to ROM
  */
  void log(){
-   unsigned int address = 0x00; 
+   int address = 0x00; 
    int startDay = Rom.read(0x00);  
    int startMonth = Rom.read(0x01);
    int startYear = Rom.read(0x02);
@@ -200,40 +204,31 @@ void sleep(){
    int currentDay = RTC.getDay();
    int currentMonth = RTC.getMonth();
    int currentYear = RTC.getYear();
+   int current_date2days = RTC.date2days(currentDay, currentMonth, currentYear);
+   int start_date2days = RTC.date2days(startDay, startMonth, startYear);
    
-   if(startDay > 31 || startDay < 0 || startMonth > 12 || startMonth < 0 || startYear > 99 || startYear < 15){
-     Rom.write(0x00, currentDay);
-     Rom.write(0x01, currentMonth);
-     Rom.write(0x02, currentYear);     
-     
-     for(int i = 3; i < 51; i ++){
-       Rom.write(i, 0xff);
-     }
-     
-     address = 0x03;
-   } 
+   if(startDay > 31 || startDay < 0 || startMonth > 12 || startMonth < 0 || startYear > 99 || startYear < 15 || //Junk data
+      address > 32741 || current_date2days < start_date2days){   //Rom memory exceeded or time error
+      address = 0x00;
+   }
    else{
      address = (RTC.date2days(currentDay, currentMonth, currentYear) - RTC.date2days(startDay, startMonth, startYear)) * 51;
-     
-     if(address > 32741) address = 0x00; //Rom memory exceeded
-     
-     if(Rom.read(address) != currentDay || (Rom.read(address + 1) != currentMonth) || (Rom.read(address + 2) != currentYear)){  //Clean row for new data
-       Rom.write(address, currentDay);
-       Rom.write(address + 1, currentMonth);
-       Rom.write(address + 2, currentYear); 
-       
-       for(int i = address + 3; i < 51; i ++){
-         Rom.write(address, 0xff);
-       } 
-       
-     }
-     address += currentHour * 2 + 3; 
-     Serial.print("Address to print to: ");
-     Serial.println(address); 
    }
    
-     Rom.write(address, TH.getTemperature());
-     Rom.write(address + 1, TH.getHumidity()); 
+   if((Rom.read(address) != currentDay) || (Rom.read(address + 1) != currentMonth) || (Rom.read(address + 2) != currentYear)){  //Clean row for new data
+     Rom.write(address, currentDay);
+     Rom.write(address + 1, currentMonth);
+     Rom.write(address + 2, currentYear); 
+       
+     for(int i = address + 3; i < 51; i ++){
+       Rom.write(i, 0xff);
+     } 
+   }
+     
+   address += currentHour * 2 + 3; 
+   
+   Rom.write(address, TH.getTemperature());
+   Rom.write(address + 1, TH.getHumidity()); 
  }
 
 /******************************************************************
@@ -257,23 +252,42 @@ void blink(){
 
 
 /******************************************************************
- *	 Adjust brightness of the board by reading ambient light sensor
+ *	 Adjust brightness of the board & status LED by reading ambient light sensor
  */
 void  adjustBrightness(){
   static unsigned long lastCheck;
-  byte PWMBoard;
-  int LDR = analogRead(LDRPin);
+  byte PWMBoard, PWMLed;
   
   if(millis() - lastCheck < 1000) return;
+  int LDR = analogRead(LDRPin);
   
   PWMBoard = map(LDR, 0, 1024, 0, 15);   
-//  Serial.print(LDR);
-//  Serial.print("    ");
-//  Serial.println(PWMBoard);
   Board1.setBrightness(PWMBoard);
+  
+  PWMLed = map(LDR, 0, 1024, 1, 100);
+  analogWrite(red, statusLed[0] * PWMLed);
+  analogWrite(green, statusLed[1] * PWMLed);
+  analogWrite(blue, statusLed[2] * PWMLed);
+  
   lastCheck = millis();
 }
 
+
+/******************************************************************
+ *	 Go to stand by mode OR wake Up
+ */
+ 
+void goToStandBy(){
+  standBy = true;
+  attachInterrupt(1, wakeUp, RISING);
+  Board1.turnOff();
+}
+
+void wakeUp(){
+  standBy = false;
+  attachInterrupt(1, goToStandBy, FALLING);
+  if (!sleep) Board1.turnOn();
+}
 
 /******************************************************************
  *	 Receive IR signal
@@ -284,7 +298,18 @@ void receiveIR(){
   
     switch(IR1.receive()){
     case 'P':
-      sleep();
+      static unsigned long lastPress;
+      if (millis() - lastPress > 500){
+        lastPress = millis();
+        if(sleep z){
+          sleep = false;
+          if (!standBy) Board1.turnOn();
+        }
+        else{
+          sleep = true;
+          Board1.turnOff();
+        }
+      }
       break;  
     case 'L':
       Serial.println("L");    //Louder
@@ -298,8 +323,8 @@ void receiveIR(){
     case '-':
       Serial.println("-");
       break;
-    default:
-      Serial.println("Error");   //Error
+ // default:
+   // Serial.println("Error");   //Error
   }
   
 }

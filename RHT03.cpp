@@ -5,8 +5,8 @@
 
 RHT03::RHT03(uint8_t _RHT03_Pin){ //constructor
   RHT03_Pin = _RHT03_Pin;
-  DDRB |= (1 << RHT03_Pin);    //RHT03Pin as output  
-  PORTB |= (1 << RHT03_Pin);    //RH03Pin HIGH   
+  DDRD |= (1 << RHT03_Pin);    //RHT03Pin as output  
+  PORTD |= (1 << RHT03_Pin);    //RH03Pin HIGH   
 }
 
 /******************************************************************
@@ -20,20 +20,20 @@ void RHT03::updateTH(){
     RHT03_Data[x] = 0;
   }
 
-  PORTB &= ~(1 << RHT03_Pin); //RHT03Pin LOW
+  PORTD &= ~(1 << RHT03_Pin); //RHT03Pin LOW
   delay(30);
-  PORTB |= (1 << RHT03_Pin);  //RHT03Pin HIGH
+  PORTD |= (1 << RHT03_Pin);  //RHT03Pin HIGH
   delayMicroseconds(40);
-  DDRB &= ~(1 << RHT03_Pin);  //RHT03Pin as input
+  DDRD &= ~(1 << RHT03_Pin);  //RHT03Pin as input
   delayMicroseconds(40);
 
   //Sensor response check
-  if (PINB & (1 << RHT03_Pin)){
+  if (PIND & (1 << RHT03_Pin)){
     Serial.println("RHT03: Response Check 1 Error"); 
     return;
   }
   delayMicroseconds(80);
-  if (!(PINB & (1 << RHT03_Pin))){
+  if (!(PIND & (1 << RHT03_Pin))){
     Serial.println("RHT03: Response Check 2 Error"); 
     return;
   }
@@ -43,8 +43,8 @@ void RHT03::updateTH(){
     RHT03_Data[i] = Read_RHT03_Data();
   }
 
-  DDRB |= (1 << RHT03_Pin);    //RHT03Pin as output  
-  PORTB |= (1 << RHT03_Pin);    //RH03Pin HIGH   
+  DDRD |= (1 << RHT03_Pin);    //RHT03Pin as output  
+  PORTD |= (1 << RHT03_Pin);    //RH03Pin HIGH   
 
 
   //Check Sum, sometimes check sum bigger than 8 bit so we multiply it by B11111111
@@ -70,13 +70,13 @@ uint8_t RHT03::Read_RHT03_Data(){
   uint8_t result = 0;
 
   for(int i = 0; i < 8; i++){
-    while(!(PINB & (1 << RHT03_Pin))); //wait 40usec
+    while(!(PIND & (1 << RHT03_Pin))); //wait 40usec
     delayMicroseconds(40);
 
-    if(PINB & (1 << RHT03_Pin)){  //if pin still '1' after 40usec that it's '1'
+    if(PIND & (1 << RHT03_Pin)){  //if pin still '1' after 40usec that it's '1'
       result |= (1 << (7 - i));
     }
-    while(PINB & (1 << RHT03_Pin));    //wait for next bit
+    while(PIND & (1 << RHT03_Pin));    //wait for next bit
   }
   return result;
 }

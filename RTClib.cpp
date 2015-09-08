@@ -85,11 +85,11 @@ void RTClib::setTime(String _serIn){
 			return;
 	}  
      
-    tempStr = serIn.substring(lastData, lastData + 4);
-    lastData += 5;
+    tempStr = serIn.substring(lastData, lastData + 2);
+    lastData += 3;
     tempStr.toCharArray(cArray, tempStr.length() + 1);
     y = atoi(cArray);
-	if (y > 2099 || y < 2012){
+	if (y > 99 || y < 12){
 			Serial.println("Year Error");
 			return;
 	}  
@@ -135,13 +135,13 @@ void RTClib::setTime(String _serIn){
  void RTClib::writeTime(uint16_t y, uint8_t m, uint8_t d, uint8_t hh, uint8_t mm, uint8_t ss){
 	Wire.beginTransmission(DS1307_ADDRESS);
 	Wire.write(0);
-	Wire.write(dec2bcd(ss));			//sec
-	Wire.write(dec2bcd(mm));			//min
-	Wire.write(dec2bcd(hh));			//hour
+	Wire.write(dec2bcd(ss));		//sec
+	Wire.write(dec2bcd(mm));		//min
+	Wire.write(dec2bcd(hh));		//hour
 	Wire.write(dec2bcd(0));			//day of week
 	Wire.write(dec2bcd(d));			//day
 	Wire.write(dec2bcd(m));			//month
-	Wire.write(dec2bcd(y - 2000));	//year
+	Wire.write(dec2bcd(y));	                //year
 	Wire.write(0);
 	Wire.endTransmission(); 
  }
@@ -175,7 +175,7 @@ uint16_t RTClib::dateDiff(uint8_t day, uint8_t month, uint8_t year){
 /******************************************************************
  *	Number of days since 2000/01/01, valid for 2001....2099
  */
-uint16_t RTClib::date2days(uint8_t day, uint8_t month, uint8_t year){
+int RTClib::date2days(uint8_t day, uint8_t month, uint8_t year){
 	uint16_t days = day; 
 	for (uint8_t i = 1; i < month; i++)
 		days += pgm_read_byte(daysInMonth + i - 1);
