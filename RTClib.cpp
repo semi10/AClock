@@ -59,7 +59,7 @@ String RTClib::getTime(){
 
 /******************************************************************
  *	Set time from string. 
- *      Time Format: "c: dd/mm/yyyy hh:mm:ss PM" <-(or AM) 
+ *      Time Format: "c: dd/mm/yy hh:mm:ss PM" <-(or AM) 
  *      9600 baud recommended!!!
  */
 void RTClib::setTime(String _serIn){

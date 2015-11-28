@@ -8,8 +8,9 @@
 #include "RHT03.h"
 #include "IR.h"
 
-#define IRpin 2
-#define LDRPin 3
+
+#define IRpin 3   //Digital
+#define LDRPin 3  //Analog
 #define red 9
 #define green 10
 #define blue 11
@@ -32,7 +33,7 @@ boolean TemperatureMode = true;
 void setup(){
   Serial.begin(19200);
   Board1.resetBoard();
-  attachInterrupt(1, goToStandBy, FALLING);
+  attachInterrupt(0, goToStandBy, FALLING);  //PIR
   Board1.print("Debug", 0, 'g', 1);
   Board1.load("Some random text to test IR receiver..", 1, 'g');
   delay(4000);
@@ -125,7 +126,7 @@ void getData(){
     serIn.concat(character);
   }
   Serial.println(serIn);
-  if (serIn.startsWith("c:")){ //c: for clock adjust - Time Format: "c: dd/mm/yyyy hh:mm:ss PM" <-(or AM) 
+  if (serIn.startsWith("c:")){ //c: for clock adjust - Time Format: "c: dd/mm/yy hh:mm:ss PM" <-(or AM) 
     RTC.setTime(serIn);
   }
   else if(serIn.startsWith("c?")){
@@ -279,13 +280,13 @@ void  adjustBrightness(){
  
 void goToStandBy(){
   standBy = true;
-  attachInterrupt(1, wakeUp, RISING);
+  attachInterrupt(0, wakeUp, RISING);
   Board1.turnOff();
 }
 
 void wakeUp(){
   standBy = false;
-  attachInterrupt(1, goToStandBy, FALLING);
+  attachInterrupt(0, goToStandBy, FALLING);
   if (!sleep) Board1.turnOn();
 }
 
@@ -301,7 +302,7 @@ void receiveIR(){
       static unsigned long lastPress;
       if (millis() - lastPress > 500){
         lastPress = millis();
-        if(sleep z){
+        if(sleep){
           sleep = false;
           if (!standBy) Board1.turnOn();
         }
