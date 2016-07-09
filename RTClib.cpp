@@ -57,6 +57,12 @@ String RTClib::getTime(){
 	return (formatNumber(hh) + " " + formatNumber(mm));
 }
 
+void RTClib::getTime(String &hour, String &minute){
+  RTClib::now();
+  hour = formatNumber(hh);
+  minute = formatNumber(mm);
+}
+
 /******************************************************************
  *	Set time from string. 
  *      Time Format: "c: dd/mm/yy hh:mm:ss PM" <-(or AM) 

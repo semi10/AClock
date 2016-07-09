@@ -1,8 +1,8 @@
 /*
- * ht1632c.h
- * defintions for Holtek ht1632C LED driver.
- * Updated for the HT1632C by Nick H
- */
+   ht1632c.h
+   defintions for Holtek ht1632C LED driver.
+   Updated for the HT1632C by Nick H
+*/
 
 
 #ifndef ht1632c_h
@@ -10,9 +10,9 @@
 
 #include <Arduino.h>
 /*
- * commands written to the chip consist of a 3 bit "ID", followed by
- * either 9 bits of "Command code" or 7 bits of address + 4 bits of data.
- */
+   commands written to the chip consist of a 3 bit "ID", followed by
+   either 9 bits of "Command code" or 7 bits of address + 4 bits of data.
+*/
 #define HT1632_ID_CMD 4		/* ID = 100 - Commands */
 #define HT1632_ID_RD  6		/* ID = 110 - Read RAM */
 #define HT1632_ID_WR  5		/* ID = 101 - Write RAM */
@@ -35,47 +35,43 @@
 #define HT1632_CMD_PWM    0xA0	/* CMD= 101x-PPPP-x PWM duty cycle */
 #define HT1632_CMD_BITS (1<<7)
 
-class ht1632c{
-  
-  typedef struct{
-    String txt;
-    char color;   
-  } Message;
-    
-  typedef struct{
-    Message  newMsg;
-    Message  oldMsg;
-    int  pause;              // Delay Between text shift
-    unsigned long lastMove;   // Last shift
-    byte  scrollChar;         // First char to write
-    byte  charColumn;         // Column of first char to write 
-  } Row;
-  
+class ht1632c {
+
+    typedef struct {
+      String message;
+      byte color;
+      boolean line;
+      unsigned long lastMove;   // Last shift
+      byte  scrollChar;         // First char to write
+      byte  charColumn;         // Column of first char to write
+    } QueuedMsg;
+
+
   public:
-	  ht1632c(byte ht1632_cs, byte ht1632_clk, byte ht1632_wrclk, byte ht1632_data);
-	  void point(byte x , byte y, char color);
-          void load(String message, boolean line, char color);
-          void print(String message, boolean line, char color, boolean noGap);
-          boolean scroll(boolean row, int pause);
-	  void resetBoard();
-	  void resetBoard(boolean row);
-          void setBrightness(byte lux);
-          void turnOn();
-          void turnOff();
+    ht1632c(byte ht1632_cs, byte ht1632_clk, byte ht1632_wrclk, byte ht1632_data);
+    void point(byte x , byte y, char color);
+    int print(String message, boolean line, char color, char symbol = '\0');
+    void scroll(boolean row, int pause);
+    boolean scrolling;
+    void resetBoard();
+    void resetBoard(boolean row);
+    void setBrightness(byte lux);
+    void turnOn();
+    void turnOff();
   private:
-	  void chipFree();
-	  void chipSelect(byte chip);
-	  void sendCmd (byte c, byte command);
-	  void sendData (byte c, byte address, byte data);
-	  void reAddress(byte column, byte row, char color, byte data);
-	  void writeBits (byte bits, byte firstbit);
-          byte activeChip;
-          byte addressState[32][2][2];         // addressState of [column][row][color: 0 - for red, 1 - for green]
-	  byte _ht1632_cs;
-	  byte _ht1632_clk;
-	  byte _ht1632_wrclk;
-	  byte _ht1632_data;         
-          Row row[2];
-          
+    QueuedMsg scrollingMsg;
+    int msgPixelWidth(String message);
+    void chipFree();
+    void chipSelect(byte chip);
+    void sendCmd (byte c, byte command);
+    void sendData (byte c, byte address, byte data);
+    void reAddress(byte column, byte row, char color, byte data);
+    void writeBits (byte bits, byte firstbit);
+    byte activeChip;
+    byte addressState[32][2][2];         // addressState of [column][row][color: 0 - for red, 1 - for green]
+    byte _ht1632_cs;
+    byte _ht1632_clk;
+    byte _ht1632_wrclk;
+    byte _ht1632_data;
 };
 #endif

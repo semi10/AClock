@@ -16,6 +16,7 @@ class RTClib{
 	  void setTime(String _serIn);
 	  String getDate();
 	  String getTime();	
+    void getTime(String &hour, String &minute);
 	  uint8_t getSec()     {return ss;}
           uint8_t getMinute()  {return mm;}
           uint8_t getHour()    {return hh;}
