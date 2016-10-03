@@ -2,7 +2,7 @@
 *Writen for DS1307 RTC 
 */
 #include "RTClib.h"
-#include "C:\Program Files (x86)\Arduino\hardware\arduino\avr\libraries\Wire\Wire.h"
+#include <Wire.h>
 
 RTClib::RTClib(){ //constructor
 	Wire.begin();

@@ -7,6 +7,7 @@
 #include "ht1632c.h"
 #include "RHT03.h"
 #include "IR.h"
+#include "ProgressBar.h"
 
 
 #define IRpin 3   //Digital
@@ -20,10 +21,10 @@ RHT03 TH(4);  //Temperature & Humidity sensor
 RTClib RTC;   //Real Time Clock
 I2CRom Rom;
 IR  IR1(IRpin);                  // IR remote
+ProgressBar ProgressBar1(&Board1);
 boolean statusLed[3] = {0, 1, 0}; // [R,G,B]
-
 boolean sleep = false;
-volatile boolean standBy = false;    //No movement registered in last 20 minutes
+volatile boolean standBy = false;    //No movement registered in last ~20 minutes
 
 boolean DateMode = false;
 boolean HumidityMode = true;
@@ -34,7 +35,7 @@ void setup() {
   Board1.resetBoard();
   attachInterrupt(0, goToStandBy, FALLING);  //PIR
   Board1.print("Debug", 0, 'g');
-  delay(3000);
+  delay(5000);
 }
 
 void loop() {
@@ -49,8 +50,7 @@ void loop() {
   else if (!standBy) ModeSelect();
 
   if (Serial.available() > 0) getData();
-
-  //blink();
+  if (ProgressBar1.getInProgress()) ProgressBar1.animateProgress();
 
 }
 
@@ -63,32 +63,41 @@ void UpdateTime() {
   static int column; // colon column
 
   //Executed each minute
-  if (RTC.timeChanged()) { 
-    
+  if (RTC.timeChanged()) {
+
     RTC.getTime(hour, minute);
     time = hour + ':' + minute;
     column = Board1.print(time , 0 , 'g', ':');
     blink(column, true);
-    
+
     // Turn on display in the morning
-    if (hour == "06" && minute == "40" && standBy == true) { 
+    if (hour == "06" && minute == "40" && standBy == true) {
       sleep = false;
       if (!standBy) Board1.turnOn();
     }
 
-    if (RTC.getMinute() == 0) log(); //Write to log each hour   
+    if (RTC.getMinute() == 0) log(); //Write to log each hour
 
     lastTimeUpdate = millis();
+
+    ProgressBar1.redraw();
+    //    //Progress Bar refresh
+    //    if (progressBar != 0) {
+    //      int tempBar = progressBar;
+    //      progressBar = 0;
+    //      updateProgress(tempBar);
+    //    }
+
   }
   else if (abs(millis() - lastTimeUpdate) > 62000) {
     Board1.print("??:??", 0, 'r');
-    //lastTimeUpdate = millis();
   }
-  else{
-    blink(column, false); 
+  else {
+    blink(column, false);
   }
 
-   
+
+
 }
 
 
@@ -136,16 +145,15 @@ void getData() {
   char temp[3]; //for string to number convertion
 
 
-  while (Serial.available()) {
-    delay(2);
-    character = Serial.read();
-    serIn.concat(character);
-  }
-
-  //serIn = Serial.readStringUntil('\r');
-  //serIn = Serial.readString();
+    while (Serial.available()) {
+      delay(6);
+      character = Serial.read();
+      serIn.concat(character);
+      if (character == '\n') break;
+    }
 
   Serial.println(serIn);
+
   if (serIn.startsWith("c:")) { //c: for clock adjust - Time Format: "c: dd/mm/yy hh:mm:ss PM" <-(or AM)
     RTC.setTime(serIn);
   }
@@ -162,7 +170,7 @@ void getData() {
     Serial.print(":");
     Serial.println(RTC.getSec());
   }
-  else if (serIn.startsWith("p:")) { //p for print text
+  else if (serIn.startsWith("p:")) { //p: for print text
     if (serIn.lastIndexOf('\r') != -1) serIn.remove(serIn.lastIndexOf('\r')); //remove new line char
     Board1.print(serIn.substring(3, serIn.length()), 1, 'g');
   }
@@ -186,6 +194,8 @@ void getData() {
     statusLed[0] = 0;  //R
     statusLed[1] = 1;  //G
     statusLed[2] = 0;  //B
+    ProgressBar1.clear();
+    ProgressBar1.setInProgress(false);
   }
   else if (serIn.startsWith("rom?")) {  //rom? for rom read
     int progress = 0;
@@ -197,16 +207,37 @@ void getData() {
         Serial.print(" ");
 
         if ((day * 51 + column) % 512 == 0) {
-          if (progress < 32) Board1.point(progress, 15, 'r');
-          else Board1.point(progress - 32, 15, 'o');
+          if (progress < 32) Board1.point(progress, 7, 'r');
+          else Board1.point(progress - 32, 7, 'o');
           progress += 1;
         }
-
       }
       Serial.println();
     }
     Board1.resetBoard();
     Board1.print(RTC.getTime(), 0, 'g');
+  }
+  else if (serIn.startsWith("t:")) { //t: for time (progress bar)
+    int newVal = serIn.substring(3, serIn.length()).toInt();
+    if (newVal < ProgressBar1.getVal()) ProgressBar1.clear();
+    ProgressBar1.set(newVal);
+  }
+  else if (serIn.startsWith("s:")) { //s: for state (play/pause/stop)
+    int state = serIn.substring(3, serIn.length()).toInt();
+
+    switch (state) {
+      case 0: //Stopped
+        ProgressBar1.setInProgress(false);
+        ProgressBar1.clear();
+        break;
+      case 1: //Paused
+        ProgressBar1.setInProgress(false);
+        ProgressBar1.redraw();
+        break;
+      case 2: //Playing
+        ProgressBar1.setInProgress(true);
+        break;
+    }
   }
 }
 
@@ -256,7 +287,7 @@ void log() {
 */
 void blink(int column, bool sync) {
   static unsigned long lastBlink;
-  
+
   if (millis() - lastBlink < 500) {
     Board1.point(column, 2, 'g');
     Board1.point(column, 4, 'g');
@@ -281,10 +312,10 @@ void  adjustBrightness() {
   if (millis() - lastCheck < 1000) return;
   int LDR = analogRead(LDRPin);
 
-  PWMBoard = map(LDR, 0, 800, 0, 15);
+  PWMBoard = map(LDR, 0, 1024, 0, 15);
   Board1.setBrightness(PWMBoard);
 
-  PWMLed = map(LDR, 0, 800, 1, 100);
+  PWMLed = map(LDR, 0, 1024, 1, 30);
   analogWrite(red, statusLed[0] * PWMLed);
   analogWrite(green, statusLed[1] * PWMLed);
   analogWrite(blue, statusLed[2] * PWMLed);
@@ -348,4 +379,3 @@ void receiveIR() {
   }
 
 }
-

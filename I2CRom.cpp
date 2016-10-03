@@ -2,7 +2,8 @@
 *Writen for 24LC256 I2C EEPROM - 256kbit
 */
 #include "I2CRom.h"
-#include "C:\Program Files (x86)\Arduino\hardware\arduino\avr\libraries\Wire\Wire.h"
+#include <Wire.h>
+
 
 I2CRom::I2CRom(){ //constructor
 	Wire.begin();
