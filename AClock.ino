@@ -15,6 +15,7 @@
 #define red 9
 #define green 10
 #define blue 11
+#define bluetoothStatus 16
 
 ht1632c Board1(5, 6, 7, 0); //(CS, CLK, WR, DATA, NC, NC, GND, VCC) -> (CS,CLK,WR - Port D , DATA - Port B)
 RHT03 TH(4);  //Temperature & Humidity sensor
@@ -33,7 +34,8 @@ boolean TemperatureMode = true;
 void setup() {
   Serial.begin(19200);
   Board1.resetBoard();
-  attachInterrupt(0, goToStandBy, FALLING);  //PIR
+  attachInterrupt(digitalPinToInterrupt(IRpin), initIRInterrupt, CHANGE);  //PIR
+  pinMode(bluetoothStatus, INPUT);
   Board1.print("Debug", 0, 'g');
   delay(5000);
 }
@@ -42,8 +44,13 @@ void loop() {
 
   UpdateTime();
 
-  if (IR1.available()) receiveIR();
-
+  if (IR1.available()){
+    receiveIR();
+  }
+  if (bluetoothStatus){
+    
+  }
+  
   adjustBrightness();
 
   if (Board1.scrolling) Board1.scroll(1, 100);
@@ -347,7 +354,7 @@ void receiveIR() {
   // char IRcommand;
   // IRcommand =  IR.receive();
 
-  switch (IR1.receive()) {
+  switch (IR1.getCommand()) {
     case 'P':
       static unsigned long lastPress;
       if (millis() - lastPress > 500) {
@@ -363,19 +370,25 @@ void receiveIR() {
       }
       break;
     case 'L':
-      Serial.println("L");    //Louder
+      Serial.print("L");    //Louder
       break;
     case 'Q':
-      Serial.println("Q");     //Quiet
+      Serial.print("Q");     //Quiet
       break;
     case '+':
-      Serial.println("+");
+      Serial.print("+");
       break;
     case '-':
-      Serial.println("-");
+      Serial.print("-");
       break;
       // default:
       // Serial.println("Error");   //Error
   }
 
 }
+
+//Init IR Interrupt
+void initIRInterrupt(){
+  IR1.receiveBit();
+}
+

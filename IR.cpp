@@ -7,81 +7,160 @@ int IRpin;
 
 IR::IR(int _IRpin){ //constructor
   IRpin = _IRpin;
+  auxtek = {{4450, 4500}, {{580,580},{580,1700}}, 16, 16, false, {0,0}};
+  deviation = 200;
+  maximumDelay = 5000;
+  IRAvailable = false;
+  DDRD &= ~(B00000001 << IRpin); //Set IRpin as input
+  resetTransmission();
 }
+
+
+
+/******************************************************************
+ *  Get bit from IR remote
+ */
+void IR::receiveBit(){
+   if (micros() - lastInterrupt < maximumDelay){
+      if ((PIND & (1 << IRpin))){                             //IR pin HIGH (Low part of the bit received)
+        receivedPulse[LOW] = micros() - lastInterrupt;
+      }
+      else if (!(PIND & (1 << IRpin)) && receivedPulse[LOW] > 0){ //IR pin LOW (Low & High part of the bit received)
+        receivedPulse[HIGH] = micros() - lastInterrupt;
+        writeBit();
+      }
+      else{                                                   //HIGH pulse before LOW 
+        resetTransmission();
+      }
+   }
+   else{                                                      //Delay too long
+    resetTransmission();
+   }
+   
+   lastInterrupt = micros();
+}
+
+
+/******************************************************************
+ *  Write bit to tmp variable
+ */
+void IR::writeBit(){
+  if (identifiedProtocol != NONE){
+    if (bitNumber < 16) address |= (decodeBit(receivedPulse, auxtek.data) << (15 - bitNumber));  
+    else command |= (decodeBit(receivedPulse, auxtek.data) << (31 - bitNumber));  
+
+    bitNumber++;
+    if (bitNumber == 32) IRAvailable = true;
+    resetBit();
+  }
+  else{
+    identifyProtocol();
+  }
+}
+
+
+/******************************************************************
+ *  Identify IR protocol
+ */
+void IR::identifyProtocol(){
+  if (isEqual(receivedPulse[LOW], auxtek.header[LOW]) && isEqual(receivedPulse[HIGH], auxtek.header[HIGH])){
+    identifiedProtocol = AUXTEK;
+    resetBit();
+  }
+  else{
+    resetTransmission();
+  }
+}
+
+
+
+/******************************************************************
+ *  Decode Bit
+ */
+boolean IR::decodeBit(unsigned long receivedPulse[2], uint16_t data[2][2]){
+  if (isEqual(receivedPulse[LOW], data[LOW][LOW]) && isEqual(receivedPulse[HIGH], data[LOW][HIGH])){
+    return false;
+  }
+  else{
+    return true;
+  }
+}
+
+
+
+/******************************************************************
+ *  Compare received pulse with protocol
+ */
+boolean IR::isEqual(unsigned volatile long receivedPulse, uint16_t compare){
+  int16_t temp = receivedPulse - compare;
+  return (abs(temp) < deviation); 
+}
+
+
+/******************************************************************
+ *  Reset Transmission (On error or received msg)
+ */
+void IR::resetTransmission(){
+   bitNumber = 0;
+   resetBit();
+   identifiedProtocol = NONE;
+   address = 0;
+   command = 0;
+}
+
+
+/******************************************************************
+ *  Reset Bit 
+ */
+void IR::resetBit(){
+   receivedPulse[LOW] = 0;
+   receivedPulse[HIGH] = 0;
+}
+
+/******************************************************************
+ *  Print Decoded data
+ */
+void IR::printDecodedData(){
+  Serial.println(address , BIN);
+  Serial.println(command , BIN);
+  Serial.println();
+}
+
 
 /******************************************************************
  *	Check for available IR transmission
  */
 boolean IR::available(){
-  static unsigned long lastReceived;
-  
-  if(millis() - lastReceived < 300) return false;  //Need gap of 300 milisec
-  
-  if(PIND & (1 << IRpin)) return false;            //If IR pin = '0' -> new transmission
-  lastReceived = millis();
-  return true;
+  return IRAvailable;
 }
+
+
 
 /******************************************************************
  *	Get command from IR remote
  */
-char IR::receive(){
-  static unsigned long receiveStart;
-  
-  delay(11);   //Ignore Junk
-  receiveStart = millis();
-  while((PIND & (1 << IRpin))&& ((millis() - receiveStart) < 6));
-    
-  address = getData();
-  command = getData();
+char IR::getCommand(){
+  IRAvailable = false;
+
+  //printDecodedData();
   
   switch(command){
-    case 0x3BC4:
+    case 0x40BF:
       return 'P';    //Power (On/Off)
       break;  
-    case 0xA35C:
+    case 0xE01F:
       return 'L';    //Louder
       break;
-    case 0x11EE:
+    case 0xD02F:
       return 'Q';     //Quiet
       break;
-    case 0x18E7:
+    case 0x48B7:
       return '+';
       break;
-    case 0x629D:
+    case 0x08F7:
       return '-';
       break;
     default:
       return 'E';    //Error
   }
-}
-/******************************************************************
- *	Receive 16 bits from IR remote
- */
-word IR::getData(){
-  boolean bitValue;
-  unsigned long startOfBit;
-  int bitLength;
-  word data = 0;
-  
-  for(int i = 0; i < 16; i++){
-    
-  startOfBit = micros();
-  
-  while(!(PIND & (1 << IRpin)) && (micros() - startOfBit) < 3000);
-  while((PIND & (1 << IRpin)) && (micros() - startOfBit) < 3000);
-  
-  bitLength = micros() - startOfBit;
-  
-  if(bitLength < 1250 && bitLength > 1050) bitValue = 0;
-  else if(bitLength < 2350 && bitLength > 2150) bitValue = 1;
-  else{
-   //  Serial.print("  Too long/short command at bit: ");
-   //  Serial.println(i);
-    return 0;
-  }
-    
-  data |= (bitValue << (15 - i));  
-}  
-  return data;
 }
